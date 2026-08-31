@@ -8,6 +8,7 @@ that is the whole point: it catches a model.pkl that got swapped or
 corrupted between training and serving, not just a missing file.
 """
 
+import glob
 import hashlib
 import logging
 import os
@@ -57,9 +58,11 @@ def load_model_with_checksum(model_name: str, model_stage: str = None, model_ver
         artifact_uri=f"models:/{model_name}/{version_info.version}"
     )
 
-    model_pkl_path = os.path.join(local_path, "model.pkl")
-    if expected_checksum and os.path.exists(model_pkl_path):
-        actual_checksum = _sha256_of_file(model_pkl_path)
+    # Same layout uncertainty as training/train_and_push.py - glob for it
+    # instead of assuming it sits directly at local_path's root.
+    model_pkl_matches = glob.glob(os.path.join(local_path, "**", "model.pkl"), recursive=True)
+    if expected_checksum and model_pkl_matches:
+        actual_checksum = _sha256_of_file(model_pkl_matches[0])
         if actual_checksum != expected_checksum:
             raise ChecksumMismatchError(
                 f"{model_name} v{version_info.version}: artifact checksum mismatch "

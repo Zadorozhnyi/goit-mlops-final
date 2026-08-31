@@ -61,11 +61,21 @@ configs:
 # repo-server renders every Helm chart in the GitOps repo (mlflow, minio,
 # postgresql, kube-prometheus-stack...) concurrently on sync. The chart
 # default of 128Mi request OOMKilled repeatedly in goit-mlops-hw-09 once
-# several large Bitnami charts were added - bumped here from the start.
+# several large Bitnami charts were added - bumped once already to 512Mi/1Gi,
+# but that still OOMKilled here with mlflow+minio+postgresql syncing at the
+# same time. 1Gi/2Gi fixed the OOM but then couldn't even schedule: the
+# default RollingUpdate strategy needs room for old+new pod at once, and on
+# 4x t3.small nodes already packed with mlflow/ArgoCD there wasn't a spare
+# 1Gi anywhere ("Insufficient memory" on every node). Recreate avoids ever
+# needing double capacity during a rollout - short repo-server downtime
+# during upgrades is a fine trade for that.
 repoServer:
+  replicas: 1
+  deploymentStrategy:
+    type: Recreate
   resources:
     requests:
       cpu: 100m
-      memory: 512Mi
+      memory: 768Mi
     limits:
-      memory: 1Gi
+      memory: 1536Mi

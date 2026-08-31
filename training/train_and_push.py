@@ -7,6 +7,7 @@ same PushGateway push - plus the Model Registry piece the final project asks
 for (Block B1).
 """
 
+import glob
 import hashlib
 import os
 import shutil
@@ -141,8 +142,13 @@ def main() -> None:
     model_version = mlflow.register_model(model_uri=best_model_uri, name=REGISTERED_MODEL_NAME)
     print(f"Registered {REGISTERED_MODEL_NAME} version {model_version.version}")
 
-    model_pkl_path = os.path.join(BEST_MODEL_DIR, "model.pkl")
-    artifact_checksum = sha256_of_file(model_pkl_path)
+    # download_artifacts nests the file under a "model/" subfolder when a
+    # dst_path is given (it keeps the artifact_path's own name) - glob
+    # instead of hardcoding the path so this doesn't break if that changes.
+    model_pkl_matches = glob.glob(os.path.join(BEST_MODEL_DIR, "**", "model.pkl"), recursive=True)
+    if not model_pkl_matches:
+        raise FileNotFoundError(f"no model.pkl found under {BEST_MODEL_DIR}")
+    artifact_checksum = sha256_of_file(model_pkl_matches[0])
 
     client.set_model_version_tag(
         REGISTERED_MODEL_NAME, model_version.version, "git_commit_sha", git_sha

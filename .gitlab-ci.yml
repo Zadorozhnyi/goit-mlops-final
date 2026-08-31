@@ -11,7 +11,7 @@ stages:
   - rollback
 
 variables:
-  MLFLOW_TRACKING_URI: "http://mlflow-tracking.mlops-system.svc.cluster.local:5000"
+  MLFLOW_TRACKING_URI: "http://mlflow-tracking-tracking.mlops-system.svc.cluster.local:5000"
   MODEL_NAME: "iris-classifier"
 
 train-model:

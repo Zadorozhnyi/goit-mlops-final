@@ -3,11 +3,11 @@
 # here first (train_and_push.py transitions new versions to Staging).
 
 image:
-  repository: REPLACE_WITH_ECR_REPO_URI
+  repository: 121861012741.dkr.ecr.us-east-1.amazonaws.com/mlops-final/inference
   tag: latest
 
 modelName: iris-classifier
-mlflowTrackingUri: "http://mlflow-tracking.mlops-system.svc.cluster.local:5000"
+mlflowTrackingUri: "http://mlflow-tracking-tracking.mlops-system.svc.cluster.local:5000"
 rateLimit: "60/minute"
 
 activeSlot: staging

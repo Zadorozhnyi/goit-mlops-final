@@ -7,7 +7,23 @@
 # (mlflow first only because Prometheus's Grafana wires a Loki datasource
 # in the same apply; there is no hard resource dependency between the two.)
 
+# Created directly rather than left to the Applications' CreateNamespace=true:
+# that only happens once Argo CD gets around to syncing them, which is too
+# late for inference_dashboard below - it needs the namespace to exist right
+# away, in the same apply.
+resource "kubernetes_namespace_v1" "monitoring" {
+  metadata {
+    name = var.target_namespace
+  }
+
+  lifecycle {
+    ignore_changes = [metadata[0].labels, metadata[0].annotations]
+  }
+}
+
 resource "kubernetes_manifest" "prometheus_operator" {
+  depends_on = [kubernetes_namespace_v1.monitoring]
+
   manifest = {
     apiVersion = "argoproj.io/v1alpha1"
     kind       = "Application"
@@ -125,6 +141,16 @@ resource "kubernetes_manifest" "prometheus_operator" {
                 }
                 autoGenerateCert = false
               }
+              # Separate from admissionWebhooks above - this is the
+              # operator's own internal webhook TLS (for validating
+              # PrometheusRule resources), and it mounts a cert secret that
+              # only exists if cert-manager or the patch job created it.
+              # Neither is enabled here, so the pod got stuck forever in
+              # ContainerCreating waiting on a secret nobody was going to
+              # create. Turning this off too was the actual fix.
+              tls = {
+                enabled = false
+              }
             }
           }
         }
@@ -145,6 +171,8 @@ resource "kubernetes_manifest" "prometheus_operator" {
 }
 
 resource "kubernetes_manifest" "loki_stack" {
+  depends_on = [kubernetes_namespace_v1.monitoring]
+
   manifest = {
     apiVersion = "argoproj.io/v1alpha1"
     kind       = "Application"
@@ -222,5 +250,5 @@ resource "kubernetes_config_map_v1" "inference_dashboard" {
     "inference-dashboard.json" = file("${path.module}/dashboards/inference-dashboard.json")
   }
 
-  depends_on = [kubernetes_manifest.prometheus_operator]
+  depends_on = [kubernetes_namespace_v1.monitoring]
 }

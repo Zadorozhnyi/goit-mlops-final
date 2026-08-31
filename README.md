@@ -143,7 +143,7 @@ in-cluster network access instead):
 
 ```
 kubectl port-forward svc/argocd-server -n mlops-system 8080:80
-kubectl port-forward svc/mlflow-tracking -n mlops-system 5000:5000
+kubectl port-forward svc/mlflow-tracking-tracking -n mlops-system 5000:5000
 kubectl port-forward -n monitoring svc/prometheus-operator-grafana 3000:80
 kubectl port-forward -n staging svc/inference 8000:80
 kubectl port-forward -n production svc/inference 8000:80

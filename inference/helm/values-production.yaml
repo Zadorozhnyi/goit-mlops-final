@@ -9,18 +9,18 @@
 # reverting the commit is the whole rollback (Block B3/B4).
 
 image:
-  repository: REPLACE_WITH_ECR_REPO_URI
+  repository: 121861012741.dkr.ecr.us-east-1.amazonaws.com/mlops-final/inference
   tag: latest
 
 modelName: iris-classifier
-mlflowTrackingUri: "http://mlflow-tracking.mlops-system.svc.cluster.local:5000"
+mlflowTrackingUri: "http://mlflow-tracking-tracking.mlops-system.svc.cluster.local:5000"
 rateLimit: "120/minute"
 
 activeSlot: blue
 
 slots:
   - name: blue
-    modelVersion: "1"
+    modelVersion: "2"
     replicas: 2
     resources:
       requests:
@@ -29,7 +29,7 @@ slots:
       limits:
         memory: 512Mi
   - name: green
-    modelVersion: "1"
+    modelVersion: "2"
     replicas: 2
     resources:
       requests:
