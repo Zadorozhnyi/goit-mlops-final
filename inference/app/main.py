@@ -12,6 +12,7 @@ import os
 import sys
 import time
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -44,18 +45,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger("inference")
 
-limiter = Limiter(key_func=get_remote_address, default_limits=[RATE_LIMIT])
-app = FastAPI(title="iris-classifier inference service")
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
-Instrumentator().instrument(app).expose(app, endpoint="/metrics")
-
 model_state = {"model": None, "version_info": None}
 
 
-@app.on_event("startup")
-def startup() -> None:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     try:
         model, version_info = load_model_with_checksum(
             MODEL_NAME, model_stage=MODEL_STAGE, model_version=MODEL_VERSION
@@ -77,6 +71,15 @@ def startup() -> None:
     except Exception:
         logger.exception("refusing to start: could not load model")
         raise
+    yield
+
+
+limiter = Limiter(key_func=get_remote_address, default_limits=[RATE_LIMIT])
+app = FastAPI(title="iris-classifier inference service", lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 
 @app.get("/health")

@@ -1,7 +1,12 @@
-fastapi==0.115.6
+fastapi==0.141.1
 uvicorn[standard]==0.32.1
 pydantic==2.10.3
-mlflow==3.3.2
+mlflow==3.15.2
 scikit-learn==1.7.2
 slowapi==0.1.9
-prometheus-fastapi-instrumentator==7.0.0
+prometheus-fastapi-instrumentator==8.1.0
+# Transitive deps of fastapi/mlflow with real Trivy-flagged CVEs in older
+# versions - pinned explicitly so pip's resolver can't quietly settle on a
+# vulnerable one.
+starlette>=1.3.1
+pyarrow>=23.0.1
