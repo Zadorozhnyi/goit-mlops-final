@@ -35,7 +35,7 @@ slots:
       limits:
         memory: 512Mi
   - name: green
-    modelVersion: "2"
+    modelVersion: "3"
     replicas: 1
     resources:
       requests:
