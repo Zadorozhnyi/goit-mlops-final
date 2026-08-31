@@ -76,6 +76,15 @@ resource "kubernetes_manifest" "prometheus_operator" {
                 enabled = true
               }
             }
+            # Host-level metrics (disk/network/host CPU), not what Block A5
+            # asks for (pod CPU/RAM comes from kubelet/cAdvisor via the
+            # `kubelet` block above, no node-exporter involved). Cut as pure
+            # footprint reduction: it's a DaemonSet, so it costs one pod on
+            # every single node - four pods for something not on the
+            # required-metrics list, on nodes that are already memory-tight.
+            "prometheus-node-exporter" = {
+              enabled = false
+            }
             alertmanager = {
               enabled = true
               ingress = {

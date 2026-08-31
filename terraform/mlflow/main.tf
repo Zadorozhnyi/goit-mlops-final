@@ -202,6 +202,14 @@ resource "kubernetes_manifest" "mlflow_tracking" {
             # modelRegistry rides along on the same tracking server - MLflow
             # doesn't split them into a separate deployment. Registry
             # promotion (Block B2) talks to this same service.
+            #
+            # The chart's separate "run" deployment is for demo/example
+            # training jobs, not something this project uses - and on
+            # memory-constrained t3.small nodes, the 512Mi it always asks
+            # for is capacity better spent elsewhere.
+            run = {
+              enabled = false
+            }
           }
         }
       }

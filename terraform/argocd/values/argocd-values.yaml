@@ -4,6 +4,15 @@
 global:
   domain: argocd.local
 
+# Neither is used in this project (login is the built-in admin account, no
+# SSO; no Slack/email alerts configured) - cut as footprint reduction on
+# memory-tight t3.small nodes, not a functional requirement either way.
+dex:
+  enabled: false
+
+notifications:
+  enabled: false
+
 ## API server
 server:
   # No Ingress and no LoadBalancer in this project: access is through
