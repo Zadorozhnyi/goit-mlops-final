@@ -170,6 +170,25 @@ kubectl port-forward -n staging svc/inference 8000:80
 kubectl port-forward -n production svc/inference 8000:80
 ```
 
+## For the reviewer
+
+The cluster stays up for the review window; you don't need to run
+`terraform apply` yourself. A read-only IAM user (`mentor-readonly`, EKS
+access entry scoped to the built-in `AmazonEKSViewPolicy` - `get`/`list`/
+`watch` only, no write access to anything) was created for this - access
+key shared separately (LMS message / chat), not in this repo. Once you
+have it:
+
+```
+aws configure --profile mentor-readonly   # paste the access key/secret you were given
+aws eks update-kubeconfig --name mlops-final-eks --region us-east-1 --profile mentor-readonly
+kubectl get applications -n mlops-system   # all 8 should show Synced/Healthy
+kubectl get pods -A
+```
+
+Then use the same `kubectl port-forward` commands above to reach ArgoCD /
+MLflow / Grafana / the inference API yourself.
+
 ## CI/CD pipeline stages
 
 `.gitlab-ci.yml` has 6 stages: `lint`, `test`, `security`, `train`, `promote`,
