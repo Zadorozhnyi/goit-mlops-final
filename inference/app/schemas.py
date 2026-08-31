@@ -2,8 +2,9 @@
 
 Block C1 (input validation): FastAPI runs these automatically before our
 code ever sees the request. A bad type or an out-of-range value never
-reaches the model - the client gets a 422 with field-level detail, and no
-internal state ever gets a chance to leak into an error message.
+reaches the model - `main.py`'s `validation_error_handler` turns FastAPI's
+default 422 into a generic 400 with no field-level detail, so no internal
+state ever leaks into an error message.
 
 Ranges are the min/max actually seen in the Iris dataset, rounded outward a
 bit. They are not a hard domain rule, just a sanity check: a request claiming

@@ -15,6 +15,7 @@ import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -80,6 +81,18 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request: Request, exc: RequestValidationError):
+    # Block C1 asks for HTTP 400 on bad input - FastAPI's own default is 422.
+    # Deliberately generic: no field names/types from Pydantic's error detail
+    # make it into the response, only the server-side log.
+    logger.warning('{"event": "validation_error", "errors": %d}', len(exc.errors()))
+    return JSONResponse(
+        status_code=400,
+        content={"error": "invalid input"},
+    )
 
 
 @app.get("/health")
