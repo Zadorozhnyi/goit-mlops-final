@@ -295,6 +295,10 @@ resource "kubernetes_cron_job_v1" "drift_check" {
             container {
               name  = "drift-check"
               image = "${var.drift_check_image}:latest"
+              # Same "latest" mutable tag as the inference image - without
+              # this, a rebuilt image with the same tag silently keeps
+              # running whatever was cached on the node.
+              image_pull_policy = "Always"
               env {
                 name  = "LOKI_URL"
                 value = "http://loki.${var.target_namespace}.svc.cluster.local:3100"

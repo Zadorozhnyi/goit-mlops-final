@@ -63,8 +63,11 @@ scan-inference-image:
 train-model:
   stage: train
   image: python:3.12-slim
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'
+  # Manual, not "on every push": this job needs a runner that can reach the
+  # cluster's internal DNS (see the note at the top of this file) - a plain
+  # GitLab SaaS runner can't, so auto-running it on every push would just
+  # fail the pipeline for anyone without that runner registered yet.
+  when: manual
   before_script:
     - pip install -r training/requirements.txt
   script:
