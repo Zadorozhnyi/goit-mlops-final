@@ -7,6 +7,12 @@
 # activeSlot picks which one the Service actually routes to. Flipping it
 # (and committing that one-line change) is the whole deployment switch;
 # reverting the commit is the whole rollback (Block B3/B4).
+#
+# replicas: 1 per slot, not 2 - t3.small nodes hit their hard 11-pods/node
+# ENI limit with everything else already running (ArgoCD, mlflow stack,
+# kube-prometheus-stack, Loki/Promtail, node-exporter/kube-proxy/vpc-cni
+# DaemonSets). 2 nodes' worth of headroom isn't there without either a
+# bigger node group or an AWS vCPU quota increase - see README.md.
 
 image:
   repository: 121861012741.dkr.ecr.us-east-1.amazonaws.com/mlops-final/inference
@@ -21,7 +27,7 @@ activeSlot: blue
 slots:
   - name: blue
     modelVersion: "2"
-    replicas: 2
+    replicas: 1
     resources:
       requests:
         cpu: 100m
@@ -30,7 +36,7 @@ slots:
         memory: 512Mi
   - name: green
     modelVersion: "2"
-    replicas: 2
+    replicas: 1
     resources:
       requests:
         cpu: 100m
