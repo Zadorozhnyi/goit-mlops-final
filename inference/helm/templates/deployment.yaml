@@ -21,6 +21,11 @@ spec:
       containers:
         - name: inference
           image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
+          # Tag is a mutable "latest" pushed by hand (or by CI later) rather
+          # than a unique per-build tag - IfNotPresent would happily keep
+          # running whatever was cached on the node the first time it pulled
+          # this repository:tag pair, silently ignoring every image update.
+          imagePullPolicy: Always
           ports:
             - containerPort: 8000
           env:
