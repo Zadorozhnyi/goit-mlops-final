@@ -156,6 +156,28 @@ kubectl port-forward -n staging svc/inference 8000:80
 kubectl port-forward -n production svc/inference 8000:80
 ```
 
+## CI/CD pipeline stages
+
+`.gitlab-ci.yml` has 6 stages: `lint`, `test`, `security`, `train`, `promote`,
+`rollback`. Only the first three run automatically on every push; the last
+three always show up gray/"Manual" in the GitLab UI, and that's expected -
+not a broken pipeline:
+
+- **`train-model`**: needs `MLFLOW_TRACKING_URI` to resolve the cluster's
+  internal DNS name (`mlflow-tracking-tracking.mlops-system.svc.cluster.local`).
+  A plain GitLab SaaS shared runner has no route into this project's private
+  VPC, so it can only ever be run from a runner registered inside the
+  cluster - hence manual, not "on every push".
+- **`promote-to-production`** / **`rollback-production`**: manual by design,
+  not by network limitation. Promoting a model to production is meant to be
+  a deliberate human action, never something that fires automatically just
+  because training succeeded.
+
+Both promotion and rollback have already been exercised end-to-end against
+the live cluster via `scripts/promote_model.py` / `scripts/rollback.py` (see
+"Verified working end-to-end" below) - just run directly, not through this
+GitLab job, for the same network reason as `train-model`.
+
 ## What's not done yet
 
 - Block G (all bonus items)
