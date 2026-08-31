@@ -1,0 +1,30 @@
+# Block F2: same checks as `.gitlab-ci.yml`'s `lint` stage, run locally
+# before a commit lands instead of only finding out about it in CI.
+# Install once with: pip install pre-commit && pre-commit install
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args: [-c, .yamllint.yaml]
+        files: ^(rbac/|\.gitlab-ci\.yml$)
+
+  - repo: local
+    hooks:
+      - id: terraform-fmt
+        name: terraform fmt
+        entry: terraform fmt -recursive terraform/
+        language: system
+        pass_filenames: false
+        files: \.tf$

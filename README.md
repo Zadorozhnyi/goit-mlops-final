@@ -89,7 +89,9 @@ monitoring/
 scripts/        - promote_model.py, rollback.py, registry_audit.py
 rbac/           - mlops-engineer / viewer Roles and RoleBindings
 docs/           - THREAT_MODEL.md, ESCALATION_POLICY.md
-pyproject.toml, .yamllint.yaml, requirements-dev.txt - Block F2 lint config
+pyproject.toml, .yamllint.yaml, requirements-dev.txt,
+  .pre-commit-config.yaml - Block F2 lint config + pre-commit hooks
+  (`pip install pre-commit && pre-commit install` to run them locally)
 RUNBOOK.md, ADR.md, README.md (this file)
 ```
 
