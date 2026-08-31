@@ -52,6 +52,20 @@ flowchart TB
     loki -->|ships stdout via Promtail| inf_staging
 ```
 
+**Namespaces** (Block A2):
+
+- `mlops-system` - Argo CD, MLflow tracking + Model Registry, MinIO
+  (artifact store), PostgreSQL (MLflow metadata DB).
+- `monitoring` - Prometheus, Grafana, Loki + Promtail, Pushgateway, the
+  drift-check CronJob (Block E1).
+- `staging` - one inference Deployment tracking MLflow's `Staging` stage
+  directly (`MODEL_STAGE=Staging`) - always serves whatever was trained
+  most recently, no manual pinning.
+- `production` - two inference Deployments (`blue`/`green`), each pinned to
+  an explicit `MODEL_VERSION`; one Service's selector picks the active
+  slot (Block B3's blue-green strategy - see ADR.md for why this strategy
+  was chosen over Canary/A-B).
+
 ## Repository layout
 
 ```
@@ -109,8 +123,8 @@ Terraform instead (see each module's `main.tf` for why).
 - kubectl, matching the cluster's Kubernetes version (1.35)
 - Python 3.12 (training pipeline and inference service both target this)
 - Docker, to build the `inference/Dockerfile` image and push it somewhere
-  the cluster can pull from (ECR, most likely - see `image.repository` in
-  `inference/helm/values-*.yaml`, currently a placeholder)
+  the cluster can pull from - this project uses ECR, see `image.repository`
+  in `inference/helm/values-*.yaml`
 
 ## Deploying from scratch
 
