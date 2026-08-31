@@ -1,0 +1,6 @@
+apiVersion: v2
+name: inference
+description: iris-classifier FastAPI inference service (staging + blue/green production)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

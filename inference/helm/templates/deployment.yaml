@@ -1,0 +1,60 @@
+{{- range .Values.slots }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inference-{{ .name }}
+  labels:
+    app: inference
+    slot: {{ .name }}
+spec:
+  replicas: {{ .replicas }}
+  selector:
+    matchLabels:
+      app: inference
+      slot: {{ .name }}
+  template:
+    metadata:
+      labels:
+        app: inference
+        slot: {{ .name }}
+    spec:
+      containers:
+        - name: inference
+          image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
+          ports:
+            - containerPort: 8000
+          env:
+            - name: MODEL_NAME
+              value: {{ $.Values.modelName | quote }}
+            - name: MLFLOW_TRACKING_URI
+              value: {{ $.Values.mlflowTrackingUri | quote }}
+            - name: RATE_LIMIT
+              value: {{ $.Values.rateLimit | quote }}
+            - name: SLOT
+              value: {{ .name | quote }}
+            {{- if .modelStage }}
+            - name: MODEL_STAGE
+              value: {{ .modelStage | quote }}
+            {{- end }}
+            {{- if .modelVersion }}
+            - name: MODEL_VERSION
+              value: {{ .modelVersion | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .resources | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            # Loading the model from MLflow at startup can take a few
+            # seconds; give it room before the probe starts failing.
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 15
+---
+{{- end }}

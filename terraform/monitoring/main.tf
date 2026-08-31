@@ -80,6 +80,15 @@ resource "kubernetes_manifest" "prometheus_operator" {
                   enabled                  = true
                   defaultDatasourceEnabled = false
                 }
+                dashboards = {
+                  # Watches for ConfigMaps labeled grafana_dashboard: "1" in
+                  # any namespace and loads them automatically - see
+                  # inference_dashboard below. No manual "import JSON" step.
+                  enabled               = true
+                  searchInAllNamespaces = true
+                  label                 = "grafana_dashboard"
+                  labelValue            = "1"
+                }
               }
               # Fixed UIDs so dashboards keep working across recreations -
               # a random generated UID breaks any dashboard JSON that
@@ -192,4 +201,26 @@ resource "kubernetes_manifest" "loki_stack" {
       }
     }
   }
+}
+
+# A ConfigMap, not an Application - Grafana's dashboard sidecar (enabled
+# above) just watches for the grafana_dashboard label and loads whatever it
+# finds, the same way it already does for datasources. Terraform manages this
+# one directly rather than through Argo CD, same exception as the Argo CD
+# Helm release itself and the namespace it lives in: this is platform
+# bootstrap config, not an application workload.
+resource "kubernetes_config_map_v1" "inference_dashboard" {
+  metadata {
+    name      = "inference-dashboard"
+    namespace = var.target_namespace
+    labels = {
+      grafana_dashboard = "1"
+    }
+  }
+
+  data = {
+    "inference-dashboard.json" = file("${path.module}/dashboards/inference-dashboard.json")
+  }
+
+  depends_on = [kubernetes_manifest.prometheus_operator]
 }

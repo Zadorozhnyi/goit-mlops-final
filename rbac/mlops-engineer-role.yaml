@@ -1,0 +1,63 @@
+# mlops-engineer gets full control in staging - this is where they iterate,
+# so create/update/delete on the usual workload resources all need to work
+# without asking anyone.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mlops-engineer
+  namespace: staging
+rules:
+  - apiGroups: ["", "apps", "batch"]
+    resources: ["pods", "pods/log", "deployments", "services", "configmaps", "jobs", "replicasets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"] # read, not write - secrets still go through Argo CD/Git
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mlops-engineer
+  namespace: staging
+subjects:
+  # Replace with the actual IAM-mapped group/user once SSO/OIDC is wired up -
+  # for the demo this binds the group name used in aws-auth.
+  - kind: Group
+    name: mlops-engineers
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: mlops-engineer
+  apiGroup: rbac.authorization.k8s.io
+---
+# Production is the opposite: mlops-engineer can look at anything (logs,
+# pod status, describe) and restart a rollout, but cannot create or delete
+# resources directly. Changes to what's running in production are supposed
+# to come from a Git commit through Argo CD, not from someone editing the
+# cluster by hand - this role makes that the only way that actually works.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mlops-engineer
+  namespace: production
+rules:
+  - apiGroups: ["", "apps"]
+    resources: ["pods", "pods/log", "deployments", "services", "replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["patch"] # only enough to do `kubectl rollout restart`, see RUNBOOK.md
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mlops-engineer
+  namespace: production
+subjects:
+  - kind: Group
+    name: mlops-engineers
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: mlops-engineer
+  apiGroup: rbac.authorization.k8s.io

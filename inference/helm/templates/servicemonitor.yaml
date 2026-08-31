@@ -1,0 +1,17 @@
+# Picked up by the monitoring/ module's Prometheus (serviceMonitorSelector: {}
+# with SelectorNilUsesHelmValues: false scrapes ServiceMonitors in any
+# namespace, no extra RBAC needed - see terraform/monitoring/main.tf).
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: inference
+  labels:
+    app: inference
+spec:
+  selector:
+    matchLabels:
+      app: inference
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

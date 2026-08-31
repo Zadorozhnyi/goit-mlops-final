@@ -1,0 +1,24 @@
+# Staging always tracks whatever is currently in the MLflow "Staging" stage -
+# one slot, no blue/green switch needed here. Every new training run lands
+# here first (train_and_push.py transitions new versions to Staging).
+
+image:
+  repository: REPLACE_WITH_ECR_REPO_URI
+  tag: latest
+
+modelName: iris-classifier
+mlflowTrackingUri: "http://mlflow-tracking.mlops-system.svc.cluster.local:5000"
+rateLimit: "60/minute"
+
+activeSlot: staging
+
+slots:
+  - name: staging
+    modelStage: Staging
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        memory: 512Mi

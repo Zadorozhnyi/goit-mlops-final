@@ -1,0 +1,49 @@
+# Assumes the GitLab Runner executing these jobs can reach the cluster
+# network directly (e.g. a runner registered from inside EKS, same as
+# MLFLOW_TRACKING_URI's default in-cluster DNS name) - simpler than exposing
+# MLflow through a public Ingress just so a SaaS runner can reach it. See
+# README.md "Accessing MLflow" for the two options and why this one was
+# picked.
+
+stages:
+  - train
+  - promote
+  - rollback
+
+variables:
+  MLFLOW_TRACKING_URI: "http://mlflow-tracking.mlops-system.svc.cluster.local:5000"
+  MODEL_NAME: "iris-classifier"
+
+train-model:
+  stage: train
+  image: python:3.12-slim
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+  before_script:
+    - pip install -r training/requirements.txt
+  script:
+    - python training/train_and_push.py
+  # New versions always land in Staging - see training/train_and_push.py.
+  # Nobody has to remember to run a separate "register" step.
+
+promote-to-production:
+  stage: promote
+  image: python:3.12-slim
+  # Manual on purpose - Block B2 wants promotion to be a deliberate action,
+  # not something that happens automatically just because training succeeded.
+  when: manual
+  before_script:
+    - pip install mlflow==3.3.2
+  script:
+    - python scripts/promote_model.py --model "$MODEL_NAME" --latest-staging
+
+rollback-production:
+  stage: rollback
+  image: python:3.12-slim
+  when: manual
+  before_script:
+    - pip install mlflow==3.3.2
+  script:
+    - python scripts/rollback.py --model "$MODEL_NAME"
+    - echo "Now restart the production pods so they pick up the change:"
+    - echo "kubectl rollout restart deployment -n production -l app=inference"

@@ -1,0 +1,39 @@
+# Production runs two full copies (blue/green), each pinned to an explicit
+# MLflow model *version* rather than a stage - that decouples "what's
+# currently in the Production stage" from "what each slot is serving", which
+# is what makes a blue/green switch possible: you can stand up the candidate
+# in the idle slot, check it, and only then flip traffic to it.
+#
+# activeSlot picks which one the Service actually routes to. Flipping it
+# (and committing that one-line change) is the whole deployment switch;
+# reverting the commit is the whole rollback (Block B3/B4).
+
+image:
+  repository: REPLACE_WITH_ECR_REPO_URI
+  tag: latest
+
+modelName: iris-classifier
+mlflowTrackingUri: "http://mlflow-tracking.mlops-system.svc.cluster.local:5000"
+rateLimit: "120/minute"
+
+activeSlot: blue
+
+slots:
+  - name: blue
+    modelVersion: "1"
+    replicas: 2
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 512Mi
+  - name: green
+    modelVersion: "1"
+    replicas: 2
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 512Mi

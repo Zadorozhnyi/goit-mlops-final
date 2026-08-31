@@ -1,0 +1,37 @@
+# The one Service actual traffic goes through - selector picks a single
+# slot (Values.activeSlot). Flipping this value and committing it through
+# Argo CD is the blue/green switch and, in reverse, the rollback.
+apiVersion: v1
+kind: Service
+metadata:
+  name: inference
+  labels:
+    app: inference
+spec:
+  selector:
+    app: inference
+    slot: {{ .Values.activeSlot }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+  type: ClusterIP
+---
+# Separate Service with no slot filter, on purpose: Prometheus needs to keep
+# scraping the idle slot too (so its dashboards and readiness are visible
+# before it ever gets promoted to active), which the traffic-facing Service
+# above deliberately does not allow.
+apiVersion: v1
+kind: Service
+metadata:
+  name: inference-metrics
+  labels:
+    app: inference
+spec:
+  selector:
+    app: inference
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+  type: ClusterIP
