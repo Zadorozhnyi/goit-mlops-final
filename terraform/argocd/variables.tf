@@ -51,7 +51,16 @@ variable "gitops_repo_branch" {
 }
 
 variable "gitops_directory_pattern" {
-  description = "Directory glob inside the GitOps repo. Every match becomes one Argo CD Application. Directory names double as target namespaces: namespace/staging, namespace/production, namespace/monitoring."
+  description = <<-EOT
+    Directory glob inside the GitOps repo. Every match becomes one Argo CD
+    Application, and the directory name doubles as the target namespace.
+
+    Scoped to final/namespace/* on purpose, not namespace/* - the same
+    goit-argo repo also holds namespace/infra-tools and namespace/application
+    from earlier, already-graded homeworks (hw-07, hw-09). Reusing namespace/*
+    here would make the ApplicationSet pick those up too and stand up a
+    second, unwanted copy of the old MLflow/MinIO/Postgres stack.
+  EOT
   type        = string
-  default     = "namespace/*"
+  default     = "final/namespace/*"
 }
