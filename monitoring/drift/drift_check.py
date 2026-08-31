@@ -68,11 +68,14 @@ def fetch_recent_predictions(lookback_minutes: int) -> pd.DataFrame:
             if not match:
                 continue
             # The log line is a Python %-formatted string wrapped in a JSON
-            # logging format - the prediction event itself is valid JSON
-            # once isolated from the log-line wrapper around it.
+            # logging format, and the logger doesn't escape the nested
+            # "message" JSON string, so the whole line isn't valid JSON by
+            # itself - raw_decode() parses just the first valid JSON value
+            # starting at the given position and ignores whatever (broken)
+            # text follows it, which json.loads() would reject outright.
             try:
                 start = line.index("{", line.index('"message"'))
-                event = json.loads(line[start:].rsplit("}", 1)[0] + "}")
+                event, _ = json.JSONDecoder().raw_decode(line[start:])
             except (ValueError, json.JSONDecodeError):
                 continue
             if all(col in event for col in FEATURE_COLUMNS):
