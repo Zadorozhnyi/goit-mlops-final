@@ -96,9 +96,13 @@ resource "kubernetes_manifest" "prometheus_operator" {
               ingress = {
                 enabled = false
               }
+              # No custom configSecret: no external receiver (Slack/email) is
+              # wired up in this project, so the chart's own generated
+              # default (silent, no-op route) is all there is to configure -
+              # see docs/ESCALATION_POLICY.md for who actually looks at the
+              # Grafana/Prometheus Alerting view instead.
               alertmanagerSpec = {
                 forceEnableClusterMode = true
-                configSecret           = "alertmanager-secret"
               }
             }
             grafana = {
