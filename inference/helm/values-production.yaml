@@ -22,7 +22,7 @@ modelName: iris-classifier
 mlflowTrackingUri: "http://mlflow-tracking-tracking.mlops-system.svc.cluster.local:5000"
 rateLimit: "120/minute"
 
-activeSlot: blue
+activeSlot: green
 
 slots:
   - name: blue
