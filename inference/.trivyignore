@@ -1,0 +1,13 @@
+# Trivy ignore list - each entry must have a justification, reviewed before
+# every submission. Do not add entries here just to make the scan pass;
+# see .gitlab-ci.yml's scan-inference-image job for the actual gate
+# (--severity HIGH,CRITICAL --ignore-unfixed --exit-code 1).
+#
+# CVE-2026-69247 (cryptography, HIGH): fixed upstream in cryptography>=50.0.0,
+# but mlflow==3.15.2 (the latest release as of this writing) pins
+# `cryptography<50,>=43.0.0`, so pip's resolver cannot install a patched
+# version without breaking mlflow. Not exploitable via this service's actual
+# attack surface (this app never parses untrusted certificates/keys - the
+# affected code path). Accepted risk until mlflow relaxes its constraint;
+# re-check on every mlflow bump.
+CVE-2026-69247

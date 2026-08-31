@@ -2,6 +2,11 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# Pull in patched OS packages (openssl, etc.) - the base image is only
+# rebuilt occasionally, so without this Trivy flags Debian CVEs that
+# already have a fix published upstream.
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
+
 COPY app/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

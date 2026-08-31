@@ -59,7 +59,11 @@ scan-inference-image:
     - docker build -t inference:scan inference/
     # Fail the pipeline on HIGH/CRITICAL findings - anything lower is
     # logged but doesn't block (see the table Trivy prints either way).
-    - trivy image --severity HIGH,CRITICAL --exit-code 1 inference:scan
+    # --ignore-unfixed: don't block the pipeline on CVEs that have no patch
+    # published yet anywhere upstream - there is nothing an image rebuild can
+    # do about those, so gating on them just makes the check permanently red.
+    - trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1
+      --ignorefile inference/.trivyignore inference:scan
 
 train-model:
   stage: train
