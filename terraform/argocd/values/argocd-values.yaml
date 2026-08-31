@@ -1,0 +1,71 @@
+# Values for the argo-cd chart. Everything the cluster needs is here rather
+# than inline in main.tf, so changing Argo CD behaviour never touches Terraform.
+
+global:
+  domain: argocd.local
+
+## API server
+server:
+  # No Ingress and no LoadBalancer in this project: access is through
+  # kubectl port-forward, so a ClusterIP service is all that is needed and it
+  # keeps the UI off the public internet.
+  service:
+    type: ClusterIP
+    servicePortHttp: 80
+    servicePortHttps: 443
+
+  # TLS is terminated by port-forward, not by Argo CD. Without --insecure the
+  # server redirects to https and the forwarded port answers with a
+  # certificate error.
+  extraArgs:
+    - --insecure
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
+## Access control
+configs:
+  # Read-only by default; the built-in admin account stays for the demo login.
+  rbac:
+    create: true
+    policy.default: role:readonly
+    policy.csv: |
+      p, role:deployer, applications, get, */*, allow
+      p, role:deployer, applications, sync, */*, allow
+      g, argocd-admins, role:admin
+    scopes: "[groups]"
+
+  params:
+    # Matches --insecure above; the flag alone is not enough in recent charts.
+    server.insecure: true
+    controller.repo.server.timeout.seconds: 120
+
+  cm:
+    # Keep the UI honest about which repo it is tracking.
+    application.instanceLabelKey: argocd.argoproj.io/instance
+
+    # How often Argo CD re-reads git. 60s instead of the 180s default, so a
+    # push shows up in the cluster within a minute.
+    #
+    # These two keys belong to the argocd-cm ConfigMap, which is what
+    # configs.cm renders. Putting them under configs.params instead lands them
+    # in argocd-cmd-params-cm, where nothing reads them, and the polling
+    # silently stays at 180s.
+    timeout.reconciliation: 60s
+    timeout.hard.reconciliation: 0s
+
+# repo-server renders every Helm chart in the GitOps repo (mlflow, minio,
+# postgresql, kube-prometheus-stack...) concurrently on sync. The chart
+# default of 128Mi request OOMKilled repeatedly in goit-mlops-hw-09 once
+# several large Bitnami charts were added - bumped here from the start.
+repoServer:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
