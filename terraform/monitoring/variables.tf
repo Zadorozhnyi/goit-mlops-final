@@ -33,3 +33,9 @@ variable "target_namespace" {
   type        = string
   default     = "monitoring"
 }
+
+variable "drift_check_image" {
+  description = "ECR image (without tag) for the Block E1 drift-check CronJob, see monitoring/drift/"
+  type        = string
+  default     = "121861012741.dkr.ecr.us-east-1.amazonaws.com/mlops-final/drift-check"
+}

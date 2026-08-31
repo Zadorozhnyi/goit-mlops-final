@@ -12,7 +12,7 @@ rules:
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: [""]
     resources: ["secrets"]
-    verbs: ["get", "list", "watch"] # read, not write - secrets still go through Argo CD/Git
+    verbs: ["get", "list", "watch"]  # read, not write - secrets still go through Argo CD/Git
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -46,7 +46,7 @@ rules:
     verbs: ["get", "list", "watch"]
   - apiGroups: ["apps"]
     resources: ["deployments"]
-    verbs: ["patch"] # only enough to do `kubectl rollout restart`, see RUNBOOK.md
+    verbs: ["patch"]  # only enough to do `kubectl rollout restart`, see RUNBOOK.md
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

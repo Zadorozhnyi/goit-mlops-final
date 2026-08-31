@@ -1,0 +1,8 @@
+extends: default
+
+rules:
+  line-length:
+    max: 120
+  document-start: disable  # Helm/Argo CD manifests don't use `---` at file start
+  truthy:
+    allowed-values: ["true", "false", "True", "False"]

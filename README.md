@@ -60,15 +60,22 @@ terraform/
   eks/          - EKS cluster, single cpu-nodes group (reused from goit-mlops-hw-05)
   argocd/       - Argo CD + ApplicationSet (reused from goit-mlops-hw-07)
   mlflow/       - Argo CD Applications: MLflow, MinIO, PostgreSQL, Pushgateway
-  monitoring/   - Argo CD Applications: kube-prometheus-stack, Loki, inference dashboard
+  monitoring/   - Argo CD Applications: kube-prometheus-stack, Loki, inference
+                  dashboard, drift-check CronJob, alert rules
   inference/    - Argo CD Applications: inference-staging, inference-production
-training/       - training pipeline, extends goit-mlops-hw-09's train_and_push.py
+training/
+  train_and_push.py, requirements.txt - extends goit-mlops-hw-09's script
+  tests/        - unit + local-integration tests (Block F1)
 inference/
   app/          - FastAPI service (model_loader.py, schemas.py, main.py)
   helm/         - Helm chart for staging + blue/green production
+  tests/        - Pydantic schema validation tests (Block F1)
+monitoring/
+  drift/        - Block E1: Evidently drift-check job (its own small image)
 scripts/        - promote_model.py, rollback.py, registry_audit.py
 rbac/           - mlops-engineer / viewer Roles and RoleBindings
-docs/           - THREAT_MODEL.md
+docs/           - THREAT_MODEL.md, ESCALATION_POLICY.md
+pyproject.toml, .yamllint.yaml, requirements-dev.txt - Block F2 lint config
 RUNBOOK.md, ADR.md, README.md (this file)
 ```
 
@@ -151,13 +158,59 @@ kubectl port-forward -n production svc/inference 8000:80
 
 ## What's not done yet
 
-- Block E (Evidently AI drift monitoring, alerting, escalation policy)
-- Block F (pytest for the training pipeline, ruff/black/terraform fmt in CI,
-  Trivy/Grype image scanning)
 - Block G (all bonus items)
-- The inference image hasn't been built/pushed to a real registry yet -
-  `image.repository` in the Helm values is still a placeholder.
-- Nothing here has actually been `terraform apply`'d against real AWS yet -
-  this pass was file/code preparation only, done deliberately without
-  spinning up billable infrastructure before everything was ready to go up
-  at once.
+
+## Verified working end-to-end (not just file prep)
+
+Everything above has actually been `terraform apply`'d, and these were
+checked against the live cluster, not just read through:
+
+- All 8 Argo CD Applications: Synced/Healthy
+- `/predict` on both staging and production, including Pydantic validation
+  (422 on bad input) and rate limiting (429 past 60 req/min)
+- Prometheus scraping the inference service (`up{job="inference"}`,
+  `http_requests_total` present)
+- A full blue-green cycle: promote a new version, stand it up in the idle
+  slot, flip `activeSlot`, then roll back with a single commit
+- RBAC applied (`kubectl apply -f rbac/`)
+- Block E's CronJob (`monitoring/drift/`) built, pushed to ECR, and running
+  on schedule
+- Block F's tests/lint (`training/tests/`, `inference/tests/`, `ruff`,
+  `black`, `yamllint`) all passing locally
+
+## A few things that bit me getting here
+
+- **t3.small (2GB RAM) doesn't comfortably run this whole stack.** ArgoCD +
+  MLflow + kube-prometheus-stack + Loki/Promtail + inference pushed two of
+  four nodes into `NotReady` (kubelet itself stopped responding, not just
+  memory pressure) the first time everything was up at once. Fixed by
+  terminating the stuck EC2 instances (the managed node group's ASG replaces
+  them automatically) and cutting footprint: `prometheus-node-exporter`
+  disabled (a DaemonSet, so it's one pod *per node* for host metrics this
+  project doesn't use - pod CPU/RAM comes from kubelet/cAdvisor instead, see
+  `kubelet:` in `terraform/monitoring/main.tf`), Argo CD's `dex`/
+  `notifications` disabled (unused - no SSO, no external alert receiver),
+  MLflow's chart-bundled `run` deployment disabled (a demo job the chart
+  ships, not something this project calls). Also requested an AWS vCPU quota
+  increase (8 -> 16) as a longer-term fix, in case node count ever needs to
+  grow instead of shrinking further.
+- **Argo CD syncs from GitHub, not from whatever's on disk.** Forgot to push
+  a couple of values changes before wondering why an Application wouldn't
+  pick them up - obvious in hindsight, cost a few minutes each time.
+- **`kubectl port-forward` to a Service pins to whichever pod answered
+  first** and doesn't follow along when the Service's selector changes
+  (exactly what a blue-green switch does). Had to kill and reopen the
+  port-forward after every switch to see the new pod's response instead of
+  the old one's.
+- **`mlflow.artifacts.download_artifacts` nests the file under a folder
+  named after the artifact path** (`dst_path/model/model.pkl`, not
+  `dst_path/model.pkl`) when a `dst_path` is given. Broke the checksum
+  computation in both `train_and_push.py` and `model_loader.py` the same
+  way; fixed by globbing for `model.pkl` instead of hardcoding the path.
+- **kube-prometheus-stack has two separate TLS toggles that look like one.**
+  `prometheusOperator.admissionWebhooks` is the PrometheusRule validating
+  webhook; `prometheusOperator.tls` is the operator's *own* internal
+  webhook cert, and it mounts a secret that only exists if cert-manager or
+  the patch job is enabled. Disabling only the first one left a pod stuck in
+  `ContainerCreating` forever on a missing `prometheus-operator-admission`
+  secret.

@@ -31,7 +31,9 @@ def _sha256_of_file(path: str) -> str:
     return digest.hexdigest()
 
 
-def resolve_model_version(client: MlflowClient, model_name: str, model_stage: str = None, model_version: str = None):
+def resolve_model_version(
+    client: MlflowClient, model_name: str, model_stage: str = None, model_version: str = None
+):
     """Pick a version either by stage (models:/name/Production) or by an
     explicit pinned version number (used by the blue/green slots)."""
     if model_version:
@@ -70,14 +72,17 @@ def load_model_with_checksum(model_name: str, model_stage: str = None, model_ver
             )
         logger.info(
             "checksum verified for %s v%s (%s...)",
-            model_name, version_info.version, actual_checksum[:12],
+            model_name,
+            version_info.version,
+            actual_checksum[:12],
         )
     else:
         # Older model versions registered before this check existed won't
         # have the tag - log it loudly instead of silently trusting the file.
         logger.warning(
             "%s v%s has no artifact_sha256 tag, skipping checksum check",
-            model_name, version_info.version,
+            model_name,
+            version_info.version,
         )
 
     model = mlflow.pyfunc.load_model(local_path)

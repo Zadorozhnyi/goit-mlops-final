@@ -37,7 +37,10 @@ CLASS_NAMES = ["setosa", "versicolor", "virginica"]
 logging.basicConfig(
     stream=sys.stdout,
     level=logging.INFO,
-    format='{"timestamp": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s"}',
+    format=(
+        '{"timestamp": "%(asctime)s", "level": "%(levelname)s", '
+        '"logger": "%(name)s", "message": "%(message)s"}'
+    ),
 )
 logger = logging.getLogger("inference")
 
@@ -61,7 +64,10 @@ def startup() -> None:
         model_state["version_info"] = version_info
         logger.info(
             "loaded %s v%s (slot=%s, stage=%s)",
-            MODEL_NAME, version_info.version, SLOT, MODEL_STAGE or "pinned",
+            MODEL_NAME,
+            version_info.version,
+            SLOT,
+            MODEL_STAGE or "pinned",
         )
     except ChecksumMismatchError:
         # Fail loud and fail the pod - the readiness probe never goes green,
@@ -95,12 +101,14 @@ def predict(request: Request, payload: IrisInput):
         raise HTTPException(status_code=503, detail="model not loaded")
 
     try:
-        features = [[
-            payload.sepal_length,
-            payload.sepal_width,
-            payload.petal_length,
-            payload.petal_width,
-        ]]
+        features = [
+            [
+                payload.sepal_length,
+                payload.sepal_width,
+                payload.petal_length,
+                payload.petal_width,
+            ]
+        ]
         probabilities = model_state["model"].predict(features)
         # sklearn pyfunc models return the predicted class directly by
         # default; predict_proba is only reachable through the raw sklearn
@@ -111,8 +119,15 @@ def predict(request: Request, payload: IrisInput):
 
         logger.info(
             '{"request_id": "%s", "event": "prediction", "predicted_class": %d, '
-            '"latency_ms": %.2f}',
-            request_id, predicted_class, (time.monotonic() - started) * 1000,
+            '"sepal_length": %.4f, "sepal_width": %.4f, "petal_length": %.4f, '
+            '"petal_width": %.4f, "latency_ms": %.2f}',
+            request_id,
+            predicted_class,
+            payload.sepal_length,
+            payload.sepal_width,
+            payload.petal_length,
+            payload.petal_width,
+            (time.monotonic() - started) * 1000,
         )
 
         return PredictionOutput(

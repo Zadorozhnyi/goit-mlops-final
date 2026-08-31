@@ -62,10 +62,7 @@ def main() -> None:
         triggered_by=os.environ.get("GITLAB_USER_LOGIN", os.environ.get("USER", "unknown")),
     )
     print(f"{args.model} rolled back to v{rollback_version} (was: v{current_version})")
-    print(
-        "Inference pods still need a rollout restart to pick up the change - "
-        "see RUNBOOK.md."
-    )
+    print("Inference pods still need a rollout restart to pick up the change - " "see RUNBOOK.md.")
 
 
 if __name__ == "__main__":

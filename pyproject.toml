@@ -1,0 +1,12 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# Keep it to the basics that actually catch bugs (unused imports/vars, bare
+# except, etc.) - not chasing a style war on top of black.
+select = ["E", "F", "W"]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]

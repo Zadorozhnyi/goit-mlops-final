@@ -41,12 +41,29 @@
    assuming something is actually wrong.
 4. Still bad after that? Roll back (see above) while investigating.
 
-## Grafana/Evidently shows data drift (Block E, not implemented yet)
+## Grafana/Evidently shows data drift
 
-Not built in this pass - see README.md "What's not done" section. Once it
-exists: check which features drifted, compare against the reference
-dataset, decide retrain vs investigate-data-source before doing anything
-else. Don't auto-retrain on a drift alert alone.
+`monitoring/drift/drift_check.py` runs as a CronJob every 15 minutes,
+comparing the last 15 minutes of production predictions (pulled from Loki)
+against the training data, and pushes `inference_data_drift_share` /
+`inference_dataset_drift` to Prometheus. `InferenceDataDriftHigh` fires when
+more than half the features drift for 15 minutes straight.
+
+1. Don't auto-retrain on this alone. Check `inference_drift_check_samples`
+   first - a drift score based on 20 requests means something different
+   than one based on 2000.
+2. Check which specific features drifted: `kubectl logs -n monitoring
+   job/<latest drift-check job>` prints the share and sample count; for
+   per-feature detail, rerun `drift_check.py` locally against a dump of
+   recent predictions and read the full Evidently report instead of just
+   the summary metrics pushed to Prometheus.
+3. Ask whether the input data source actually changed (new client, new
+   sensor, a unit conversion bug) before deciding this needs a retrain at
+   all - drift by itself isn't proof the model got worse, just that the
+   input distribution moved.
+4. If a retrain genuinely is the right call, that's the normal "roll out a
+   new model version" flow above - promote through Staging like any other
+   version, don't hot-patch production directly.
 
 ## Tear down everything
 

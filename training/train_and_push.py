@@ -26,7 +26,11 @@ MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:50
 PUSHGATEWAY_ADDRESS = os.environ.get("PUSHGATEWAY_ADDRESS", "localhost:9091")
 EXPERIMENT_NAME = "iris-logistic-regression"
 REGISTERED_MODEL_NAME = os.environ.get("MODEL_NAME", "iris-classifier")
-BEST_MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "best_model")
+# Overridable so tests/CI can point this at a throwaway tmp dir instead of
+# polluting the real best_model/ folder next to this script.
+BEST_MODEL_DIR = os.environ.get(
+    "BEST_MODEL_DIR", os.path.join(os.path.dirname(__file__), "..", "best_model")
+)
 
 # (C, max_iter) combinations to sweep over.
 RUN_PARAMS = [
@@ -43,12 +47,15 @@ def push_metrics(run_id: str, accuracy: float, loss: float) -> None:
     accuracy_gauge = Gauge(
         "mlflow_accuracy", "Accuracy of the MLflow run", ["run_id"], registry=registry
     )
-    loss_gauge = Gauge(
-        "mlflow_loss", "Log loss of the MLflow run", ["run_id"], registry=registry
-    )
+    loss_gauge = Gauge("mlflow_loss", "Log loss of the MLflow run", ["run_id"], registry=registry)
     accuracy_gauge.labels(run_id=run_id).set(accuracy)
     loss_gauge.labels(run_id=run_id).set(loss)
-    push_to_gateway(PUSHGATEWAY_ADDRESS, job="train_and_push", registry=registry)
+    try:
+        push_to_gateway(PUSHGATEWAY_ADDRESS, job="train_and_push", registry=registry)
+    except Exception as exc:
+        # A pushgateway hiccup shouldn't fail the whole training run - the
+        # metrics are also visible in MLflow itself either way.
+        print(f"warning: could not push metrics to {PUSHGATEWAY_ADDRESS}: {exc}")
 
 
 def get_git_commit_sha() -> str:
@@ -57,11 +64,7 @@ def get_git_commit_sha() -> str:
     if env_sha:
         return env_sha
     try:
-        return (
-            subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])
-            .decode()
-            .strip()
-        )
+        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).decode().strip()
     except Exception:
         return "unknown"
 
@@ -89,9 +92,7 @@ def main() -> None:
     mlflow.set_experiment(EXPERIMENT_NAME)
 
     X, y = load_iris(return_X_y=True)
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     git_sha = get_git_commit_sha()
     dataset_version = get_dataset_version(X, y)
