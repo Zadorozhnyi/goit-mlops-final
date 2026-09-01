@@ -30,3 +30,32 @@ roleRef:
   kind: ClusterRole
   name: viewer
   apiGroup: rbac.authorization.k8s.io
+---
+# `kubectl port-forward` needs `create` on the `pods/portforward` subresource
+# - that's a distinct permission from get/list/watch on pods, and it's the
+# only "create" this project's reviewer needs to actually reach the UIs
+# (no public Ingress - see README.md "A4"). Scoped to its own ClusterRole/
+# Binding, not folded into `viewer` above, so `viewer`'s own "no create/
+# update/delete anywhere" description stays true for every other consumer
+# of that role.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: port-forwarder
+rules:
+  - apiGroups: [""]
+    resources: ["pods/portforward"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: mentor-port-forwarder
+subjects:
+  - kind: Group
+    name: mentor-viewers
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: port-forwarder
+  apiGroup: rbac.authorization.k8s.io
