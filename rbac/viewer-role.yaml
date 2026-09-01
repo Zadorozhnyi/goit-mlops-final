@@ -19,6 +19,13 @@ subjects:
   - kind: Group
     name: viewers
     apiGroup: rbac.authorization.k8s.io
+  # EKS access entry for the mentor-readonly IAM user (final project review)
+  # maps to this Kubernetes group - AmazonEKSViewPolicy alone only covers
+  # core/apps/batch resources, not CRDs like argoproj.io/monitoring.coreos.com,
+  # which is what this ClusterRole adds.
+  - kind: Group
+    name: mentor-viewers
+    apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
   name: viewer
